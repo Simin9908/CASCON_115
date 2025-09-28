@@ -84,7 +84,7 @@ Collectively, these benchmarks have advanced TSDB evaluation. However, none offe
 \section{Experimental Setup}\label{sec:setup}
 This section outlines the data generation process, data characteristics, and the process of selecting TSDBs that are used in this study.
 \subsection{Data Generation}
-The dataset used in this study is generated using \textbf{``DGSim''}, developed in prior work under this study~\cite{17_DGSim}. This models appliance-level energy consumption based on the usage patterns of various household appliances. It has been designed to model realistic energy consumption patterns by appliances including those of heating, ventilation, and air conditioning (HVAC) systems, refrigerators, and washing machines. DGSim adopts a \textbf{Markov, state-based modeling technique}, where each appliance is modeled as a probabilistic state machine~\cite{12_zucchini2016hmm}. This simulator provides a scalable, reproducible environment for generating data as required by the experiment. 
+The dataset used in this study is generated using \textbf{`DGSim'}, developed in prior work under this study~\cite{17_DGSim}. This models appliance-level energy consumption based on the usage patterns of various household appliances. It has been designed to model realistic energy consumption patterns by appliances including those of heating, ventilation, and air conditioning (HVAC) systems, refrigerators, and washing machines. DGSim adopts a \textbf{Markov, state-based modeling technique}, where each appliance is modeled as a probabilistic state machine~\cite{12_zucchini2016hmm}. This simulator provides a scalable, reproducible environment for generating data as required by the experiment. 
 DGSim originally generated aggregated energy consumption profiles for a large number of households. For the purpose of this benchmarking study, the simulator was modified to output disaggregated, appliance-level energy consumption data for individual households.
 \subsection{Data Characteristics}
 The generated dataset follows a wide format, where each row represents a timestamp and each column corresponds to a specific appliance. It captures minute-level energy consumption for twenty-six appliances over a user-defined time range. DGSim supports five distinct household types: single-family attached, single-family detached, mobile home, two-to-four room apartment and apartments with more than five rooms. Each of these have different consumption patterns.
@@ -219,7 +219,7 @@ In this section, we evaluate the ingestion performance of \textbf{TimescaleDB}, 
 Fig.~\ref{fig:ingestion_latency_comparison} illustrates the ingestion latency for each TSDB across the five workload tiers. The results show that \textbf{ClickHouse consistently outperforms} both TimescaleDB and QuestDB in terms of ingestion latency, particularly for larger workloads. This trend is consistent across all workloads. The ingestion latency of TimescaleDB increased significantly beyond W3, likely due to hyper-table chunk management and background compression tasks.
 \begin{figure}[tb]
 \centering
-\includegraphics[width=1.0\linewidth]{1_ing_latency_plot.pdf}
+\includegraphics[width=0.9\linewidth]{1_ing_latency_plot.pdf}
 \caption{Ingestion latency comparison across TSDBs for Each Workload.}
 \label{fig:ingestion_latency_comparison}
 \end{figure}
@@ -228,7 +228,7 @@ Fig.~\ref{fig:ingestion_latency_comparison} illustrates the ingestion latency fo
 Fig.~\ref{fig:ingestion_throughput_comparison} shows that ClickHouse performs the best. On W5, ClickHouse achieved the highest throughput at 891K rows/sec, followed by QuestDB at 287K rows/sec. TimescaleDB showed a consistent but relatively low throughput. QuestDB showed reduced performance on larger workloads.
 \begin{figure}[tb]
 \centering
-\includegraphics[width=1.0\linewidth]{2_ing_throughput_plot.pdf}
+\includegraphics[width=0.8\linewidth]{2_ing_throughput_plot.pdf}
 \caption{Ingestion throughput comparison across TSDBs for Each Workload.}
 \label{fig:ingestion_throughput_comparison}
 \end{figure}
@@ -237,7 +237,7 @@ Fig.~\ref{fig:ingestion_throughput_comparison} shows that ClickHouse performs th
 Fig.~\ref{fig:ingestion_storage_comparison} illustrates the storage size used by each TSDB after ingesting the datasets for each workload tier. Looking at only the standard storage, we observe that all the databases use up more space than the original CSV file. \textbf{ClickHouse shows the lowest storage footprint across all workloads}. Post compression, ClickHouse achieves the best storage. Its storage footprint is significantly reduced when compared to the original CSV file. QuestDB does not apply compression, and therefore, its storage size remains constant across all workloads. Compression in TimescaleDB shows a decrease in storage size, performing better than QuestDB in terms of storage efficiency.
 \begin{figure}[tb]
 \centering
-\includegraphics[width=1.0\linewidth]{3_ing_storage_plot.pdf}
+\includegraphics[width=0.8\linewidth]{3_ing_storage_plot.pdf}
 \caption{Ingestion Storage Comparison Across TSDBs for Each Workload.}
 \label{fig:ingestion_storage_comparison}
 \end{figure}
@@ -247,21 +247,21 @@ We benchmarked six queries (Q1-Q6) that are representative of common time series
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=1.0\linewidth]{1_query_latency_ieee.pdf}
+\includegraphics[width=0.8\linewidth]{1_query_latency_ieee.pdf}
 \caption{WL5 Query Latency Comparison Across TSDBs.}
 \label{fig:query_latency_comparison}
 \end{figure}
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=1.0\linewidth]{2_query_memory.pdf}
+\includegraphics[width=0.8\linewidth]{2_query_memory.pdf}
 \caption{WL5 Query Memory Usage Comparison Across TSDBs.}
 \label{fig:query_memory_comparison}
 \end{figure}
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=1.0\linewidth]{3_query_cpu.pdf}
+\includegraphics[width=0.8\linewidth]{3_query_cpu.pdf}
 \caption{WL5 Query CPU Usage Comparison Across TSDBs}
 \label{fig:query_cpu_comparison}
 \end{figure}

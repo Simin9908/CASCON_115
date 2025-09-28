@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  28 SEP 2025 01:26
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2025) (preloaded format=pdflatex 2025.3.8)  28 SEP 2025 01:35
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -347,17 +347,17 @@ LaTeX Info: Symbol \textrightarrow not provided by
 File: 1_ing_latency_plot.pdf Graphic file (type pdf)
 <use 1_ing_latency_plot.pdf>
 Package pdftex.def Info: 1_ing_latency_plot.pdf  used on input line 222.
-(pdftex.def)             Requested size: 252.0pt x 154.51157pt.
+(pdftex.def)             Requested size: 226.79846pt x 139.05988pt.
 <2_ing_throughput_plot.pdf, id=19, 289.39398pt x 172.68828pt>
 File: 2_ing_throughput_plot.pdf Graphic file (type pdf)
 <use 2_ing_throughput_plot.pdf>
 Package pdftex.def Info: 2_ing_throughput_plot.pdf  used on input line 231.
-(pdftex.def)             Requested size: 252.0pt x 150.3746pt.
+(pdftex.def)             Requested size: 201.60077pt x 120.29863pt.
 <3_ing_storage_plot.pdf, id=20, 255.10493pt x 209.3932pt>
 File: 3_ing_storage_plot.pdf Graphic file (type pdf)
 <use 3_ing_storage_plot.pdf>
 Package pdftex.def Info: 3_ing_storage_plot.pdf  used on input line 240.
-(pdftex.def)             Requested size: 252.0pt x 206.85258pt.
+(pdftex.def)             Requested size: 201.60077pt x 165.48271pt.
 
 
 [4 <./1_ing_latency_plot.pdf> <./2_ing_throughput_plot.pdf
@@ -368,17 +368,17 @@ pdfTeX warning: pdflatex (file ./2_ing_throughput_plot.pdf): PDF inclusion: mult
 File: 1_query_latency_ieee.pdf Graphic file (type pdf)
 <use 1_query_latency_ieee.pdf>
 Package pdftex.def Info: 1_query_latency_ieee.pdf  used on input line 250.
-(pdftex.def)             Requested size: 252.0pt x 187.10455pt.
+(pdftex.def)             Requested size: 201.60077pt x 149.68364pt.
 <2_query_memory.pdf, id=118, 283.4891pt x 208.64241pt>
 File: 2_query_memory.pdf Graphic file (type pdf)
 <use 2_query_memory.pdf>
 Package pdftex.def Info: 2_query_memory.pdf  used on input line 257.
-(pdftex.def)             Requested size: 252.0pt x 185.46829pt.
+(pdftex.def)             Requested size: 201.60077pt x 148.3759pt.
 <3_query_cpu.pdf, id=119, 283.4891pt x 208.64241pt>
 File: 3_query_cpu.pdf Graphic file (type pdf)
 <use 3_query_cpu.pdf>
 Package pdftex.def Info: 3_query_cpu.pdf  used on input line 264.
-(pdftex.def)             Requested size: 252.0pt x 185.46829pt.
+(pdftex.def)             Requested size: 201.60077pt x 148.3759pt.
 
 
 
@@ -386,8 +386,6 @@ Package pdftex.def Info: 3_query_cpu.pdf  used on input line 264.
 [5 <./3_ing_storage_plot.pdf> <./1_query_latency_ieee.pdf> <./2_query_memory.pdf> <./3_query_cpu.pdf>]
 
 
-
-[6]
 Underfull \hbox (badness 2065) in paragraph at lines 352--353
 []\OT1/ptm/m/n/8 QuestDB Team, ``Questdb doc-u-men-ta-tion: Ar-chi-tec-ture overview,''
  []
@@ -405,11 +403,7 @@ Before submitting the final camera ready copy, remember to:
 
 
 
-
-
-[7
-
-] (./conference_CASCON_115.aux)
+[6] (./conference_CASCON_115.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
@@ -418,16 +412,16 @@ L3 programming layer <2025-01-18>
 Here is how much of TeX's memory you used:
  4987 strings out of 473190
  80863 string characters out of 5715801
- 493169 words of memory out of 5000000
+ 492969 words of memory out of 5000000
  28162 multiletter control sequences out of 15000+600000
  598414 words of font info for 110 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  59i,15n,67p,1253b,297s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2025/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/public/cm-super/sfrm0800.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2025/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on conference_CASCON_115.pdf (7 pages, 299474 bytes).
+Output written on conference_CASCON_115.pdf (6 pages, 298661 bytes).
 PDF statistics:
- 276 PDF objects out of 1000 (max. 8388607)
- 176 compressed objects within 2 object streams
+ 271 PDF objects out of 1000 (max. 8388607)
+ 172 compressed objects within 2 object streams
  0 named destinations out of 1000 (max. 500000)
  31 words of extra memory for PDF output out of 10000 (max. 10000000)
 

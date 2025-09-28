@@ -49,7 +49,7 @@ time series databases, benchmarking, IoT, energy consumption, benchmark workload
 \end{IEEEkeywords}
 
 \section{Introduction}
-The rise of smart homes, Internet of Things (IoT)-enabled devices, and renewable energy systems have made \textbf{appliance-level energy consumption data} a critical resource for building intelligent infrastructure. Capturing this data at \textbf{minute-level frequency} from dozens of appliances produces large-scale, multi-dimensional time series data—demanding efficient storage, querying, and analysis. Time series databases (TSDBs) are essential for managing large volumes of time-stamped data with \textbf{low-latency read and write performance}. They are preferred over general-purpose databases in real-time monitoring applications, due to their \textbf{scalability, compression efficiency}, and native support for streaming analytics~\cite{1_tsmbench2023}. TSDBs use time-based indexing, columnar storage, down-sampling strategies, and offer built-in support for temporal queries such as sliding windows, aggregations, and time filters~\cite{1_tsmbench2023}.  Unlike traditional relational databases, TSDBs are optimized for \textbf{high ingestion throughput} and storage efficiency~\cite{1_tsmbench2023,2_tsmsurvey2017}. 
+The rise of smart homes, Internet of Things (IoT)-enabled devices, and renewable energy systems have made \textbf{appliance-level energy consumption data} a critical resource for building intelligent infrastructure. Capturing this data at a \textbf{minute-level frequency} from dozens of appliances produces large-scale, multi-dimensional time series data—demanding efficient storage, querying, and analysis. Time series databases (TSDBs) are essential for managing large volumes of time-stamped data with \textbf{low-latency read and write performance}. They are preferred over general-purpose databases in real-time monitoring applications, due to their \textbf{scalability, compression efficiency}, and native support for \textbf{streaming analytics}~\cite{1_tsmbench2023}. TSDBs use time-based indexing, columnar storage, downsampling strategies, and offer built-in support for temporal queries such as sliding windows, aggregations, and time filters~\cite{1_tsmbench2023}.  Unlike traditional relational databases, TSDBs are optimized for \textbf{high ingestion throughput} and storage efficiency~\cite{1_tsmbench2023,2_tsmsurvey2017}. 
 
 A crucial design choice when storing time series data is the schema format—wide vs. narrow. In the \textbf{wide format}, each row contains multiple sensor readings for a single timestamp. In contrast, the \textbf{narrow format} stores one measurement per row, requiring additional columns for the sensor identifier and its value. Wide-format schemas are typically better suited for high-dimensional sensor data where all sensors report at the same interval, enabling faster cross-sensor operations and improved compression due to columnar locality~\cite{6_clickbench}. However, they may be less flexible for variable-frequency streams or semi-structured data, where narrow formats are more common~\cite{2_tsmsurvey2017}.
 
@@ -71,12 +71,12 @@ The remainder of the paper is structured as follows: Section~\ref{sec:related} r
 \section{Related Work}\label{sec:related}
 Numerous benchmarks have been proposed to evaluate TSDBs, each tailored to specific application domains and workload characteristics.
 
-\textbf{TSM-Bench} is among the most comprehensive benchmarks for TSDBs used in monitoring environments~\cite{1_tsmbench2023}. It introduces offline and online workload tiers, a suite of fundamental time-based queries, and a novel Generative Adversarial Network (GAN)-based data generator (TS-LSH) tailored specifically for hydrological data. While powerful, its design is domain-specific and does not generalize well to energy datasets. \textbf{TSBS} (Time Series Benchmark Suite) is widely used in industry to compare storage size, loading time, and aggregation performance across systems like InfluxDB and TimescaleDB~\cite{3_tsbs}. However, TSBS is heavily geared toward finance and DevOps metrics, and lacks native support for wide-format ingestion and complex device-level analytics~\cite{3_tsbs}.
+\textbf{TSM-Bench} is among the most comprehensive benchmarks for TSDBs used in monitoring environments~\cite{1_tsmbench2023}. It introduces offline and online workload tiers, a suite of fundamental time-based queries, and a novel Generative Adversarial Network (GAN)-based data generator (TS-LSH) tailored specifically for hydrological data. While powerful, its design is domain-specific and does not generalize well to energy datasets. Time Series Benchmark Suite (\textbf{TSBS}) is widely used in industry to compare storage size, loading time, and aggregation performance across systems like InfluxDB and TimescaleDB~\cite{3_tsbs}. However, TSBS is heavily geared toward finance and DevOps metrics, and lacks native support for wide-format ingestion and complex device-level analytics~\cite{3_tsbs}.
 \textbf{SciTS} benchmarks TSDBs for scientific instrumentation use cases. It uses synthetic data to evaluate ingestion and query latency~\cite{5_scits2022}. SmartBench evaluates data systems for smart buildings~\cite{4_smartbench2020}. However, it limits its scope to correlation queries and basic filtering on noisy datasets. 
 \textbf{IoTDB-Benchmark} focuses on heterogeneous IoT data with different sensor types and frequencies~\cite{7_iotdbbenchmark}. It evaluates ingestion throughput and query performance but assumes narrow-format, homogeneous time series and does not support appliance-level complexity.
 \textbf{IoTAbench} was proposed as a benchmark for IoT analytics platforms and uses real-world sensor data to assess ingestion and analytics performance~\cite{9_iotabench2015}. While highlighting power usage scenarios, it uses simplified event models and focuses on system-level throughput over schema variations.
 \textbf{TS-Benchmark} is tailored to benchmark electricity data from wind turbines, while incorporating realistic workloads including anomaly detection and multi-sensor fetches. However, it is limited to offline evaluation and assumes a relatively simple data layout patterns~\cite{10_tsbenchmark2021}.
-An important system-level study is the encoding analysis for \textbf{Apache IoTDB}, which compares time series compression formats under various characteristics including data repetition, sparsity, and delta distribution~\cite{11_iotdbencoding2022}. This study indirectly evaluates performance on wide-format data by examining columnar compression effects, making it relevant for storage strategy comparisons.
+An important system-level study is the encoding analysis for \textbf{Apache IoTDB}, which compares time series compression formats under various characteristics including data repetition, sparsity, and delta distribution~\cite{11_iotdbencoding2022}.
 
 Collectively, these benchmarks have advanced TSDB evaluation. However, none offer an end-to-end assessment for appliance-level energy data, which requires support for wide and narrow schema comparisons, multi-sensor queries, and concurrent streaming and analytics—core demands in smart energy systems.
 
@@ -86,22 +86,24 @@ This section outlines the data generation process, data characteristics, and the
 \subsection{Data Generation}
 The dataset used in this study is generated using \textbf{`DGSim'}, developed in prior work under this study~\cite{17_DGSim}. This models appliance-level energy consumption based on the usage patterns of various household appliances. It has been designed to model realistic energy consumption patterns by appliances including those of heating, ventilation, and air conditioning (HVAC) systems, refrigerators, and washing machines. DGSim adopts a \textbf{Markov, state-based modeling technique}, where each appliance is modeled as a probabilistic state machine~\cite{12_zucchini2016hmm}. This simulator provides a scalable, reproducible environment for generating data as required by the experiment. 
 DGSim originally generated aggregated energy consumption profiles for a large number of households. For the purpose of this benchmarking study, the simulator was modified to output disaggregated, appliance-level energy consumption data for individual households.
+
 \subsection{Data Characteristics}
 The generated dataset follows a wide format, where each row represents a timestamp and each column corresponds to a specific appliance. It captures minute-level energy consumption for twenty-six appliances over a user-defined time range. DGSim supports five distinct household types: single-family attached, single-family detached, mobile home, two-to-four room apartment and apartments with more than five rooms. Each of these have different consumption patterns.
-For this study, datasets were exported as CSV files prior to ingestion. Table~\ref{tab:dataset_characteristics} summarizes the structure and attributes of the dataset.
+For this study, datasets were exported as CSV files prior to ingestion. Table~\ref{tab:dataset_characteristics} summarizes the structure and attributes of the appliance-level energy consumption dataset.
 
-\begin{table}[tbp]
-\caption{Characteristics of the Appliance-Level Energy Consumption Dataset}
+\begin{table}[tb]
+\caption{Characteristics of the Energy Consumption Dataset}
 \begin{center}
+    \renewcommand{\arraystretch}{1.15}
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Characteristic} & \textbf{Description} \\
 \hline
-Time Granularity & 1-minute intervals \\
-Time Range & User-defined \\
-Appliances Modeled & 26 appliances \\
-Number of Columns & 30 columns \\
-Dataset Format & Wide format \\
+Time Granularity & 1-minute \\
+Time Range & User-specified (day, month, year) \\
+Appliances Modeled & 26 \\
+Number of Columns & 30 \\
+Dataset Format & Wide (one column per appliance) \\
 House Types & 5 distinct types \\
 Operations & Simulate → Insert → Query \\
 Storage Format & CSV (pre-ingestion), TSDB (post-ingestion) \\
@@ -136,28 +138,28 @@ The final TSDBs selected were: \textbf{TimescaleDB}, \textbf{QuestDB}, and \text
 
 \section{Benchmarking Framework}\label{sec:framework}
 
-This benchmarking framework is based on the TSM Benchmarking framework~\cite{1_tsmbench2023}, which is a widely used benchmarking framework for TSDBs.  Modifications were made to extend TSM-Bench, to accommodate the specific requirements of this study, such as the data generation process, the selected TSDBs, the queries to be executed, and the performance metrics to be measured for the write and read testing. This allowed testing TSDBs' performances under realistic conditions derived from a well-defined, minute-level energy dataset.
+This benchmarking framework is based on the TSM Benchmarking framework~\cite{1_tsmbench2023}, which is a widely used benchmarking framework for TSDBs.  Modifications were made to extend TSM-Bench, to accommodate the specific requirements of this study, such as the data generation process, the selected TSDBs, the queries to be executed, and the performance metrics to be measured for the write and read testing. This allowed testing TSDBs' performances under realistic conditions derived from a well-defined, minute and appliance-level energy dataset.
 
 \subsection{Pre-Defined Workload Configurations}
-To evaluate TSDB performance under varying load conditions, we define five scalable workload tiers (W1–-W5). Each workload is generated using DGSim with the same schema and structure, but differs in scale (e.g., number of households, duration, and data volume). Prior to ingestion, a lightweight lossy compression step is applied: all numerical values are rounded to two decimal places to reduce precision without affecting benchmark integrity. Aside from this, the datasets remain unchanged.
+To evaluate TSDB performance under varying load conditions, we define five scalable workload tiers (W1–-W5). Each workload is generated using DGSim with the same schema and structure, but differs in scale (e.g., number of households, duration, and data volume). Prior to ingestion, a lightweight lossy compression step is applied to the dataset: all numerical values are rounded to two decimal places to reduce precision without affecting benchmark integrity. Aside from this, the datasets remain unchanged.
 
-As summarized in Table~\ref{tab:workload_configurations}, W1--W5 simulates appliance level household energy usage, with all datasets recorded at a one-minute interval for twenty-six appliances per house. The data points are represented in millions (M). W1 represents a baseline ingestion test with minimal load, while W5 simulates a high stress scenario involving over 44 million rows and 1.3 billion data points.
+As summarized in Table~\ref{tab:workload_configurations}, W1--W5 simulates appliance level household energy usage, with all datasets recorded at a one-minute interval for twenty-six appliances per house. The data points are represented in millions (M) as shown in Table~\ref{tab:workload_configurations}. All workloads comprise of thirty columns, having the same characteristics as shown in Table~\ref{tab:dataset_characteristics}. W1 represents a baseline ingestion test with minimal load, while W5 simulates a high stress scenario involving over 44 million rows and 1.3 billion data points.
 \begin{table}[tbp]
 \caption{Workload Tiers}
 \begin{center}
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{|c|c|c|c|c|c|c|}
     \hline
-    \textbf{Duration} & \textbf{ID} & \textbf{Houses} & \textbf{Data Points} & \textbf{Rows} & \textbf{Size (GB)} \\
+    \textbf{Duration} & \textbf{ID} & \textbf{Houses} & \textbf{Data Points (M)} & \textbf{Rows} & \textbf{Size (GB)} \\
     \hline
     \multirow{3}{*}{\shortstack{1 Day}} 
-        & W1 & 100   & 4.32 M   & 144,000     & 0.0287 \\
-        & W2 & 1,000 & 43.20 M  & 1,440,000   & 0.289 \\
-        & W3 & 5,000 & 216.00 M & 7,200,000   & 1.450 \\
+        & W1 & 100   & 4.32   & 144,000     & 0.0287 \\
+        & W2 & 1,000 & 43.20  & 1,440,000   & 0.289 \\
+        & W3 & 5,000 & 216.00 & 7,200,000   & 1.450 \\
     \hline
     \multirow{2}{*}{\shortstack{1 Month}} 
-        & W4 & 100   & 133.80 M & 4,464,000   & 0.898 \\
-        & W5 & 1,000 & 1338.00 M& 44,640,000  & 9.04 \\
+        & W4 & 100   & 133.80 & 4,464,000   & 0.898 \\
+        & W5 & 1,000 & 1338.00& 44,640,000  & 9.04 \\
     \hline
 \end{tabular}
 \label{tab:workload_configurations}
@@ -176,7 +178,7 @@ after ingestion.
 
 \subsection{Query Workload Design}
 In our application domain, the query workload is structured to test the TSDBs' ability to handle common time-series access patterns, such as consumption queries, detect threshold violations, usage summaries, compare appliance behaviors, and perform aggregations.
-The queries have been divided into two main categories: \textbf{point queries} and \textbf{analytical queries}. Point queries are designed to retrieve specific data points, while analytical queries are designed to perform aggregations and calculations on the data. This structure follows the precedent set by pre-existing benchmarks, which advocate for a mix of point queries, aggregations, and down-sampling to evaluate TSDB capabilities comprehensively~\cite{3_tsbs,11_iotdbencoding2022}.
+As a result, the queries have been divided into two main categories: \textbf{point queries} and \textbf{analytical queries}. Point queries are designed to retrieve specific data points, while analytical queries are designed to perform aggregations and calculations on the data. This structure follows the precedent set by pre-existing benchmarks, which advocate for a mix of point queries, aggregations, and downsampling to evaluate TSDB capabilities comprehensively~\cite{3_tsbs,11_iotdbencoding2022}.
 \subsubsection{Point Queries}
 The point queries used in this study are:
 \begin{itemize}
@@ -186,17 +188,17 @@ The point queries used in this study are:
 \subsubsection{Analytical Queries}
 Analytical queries are designed to typically summarize data over a specific time range, or to perform calculations on the data. The analytical queries used in this study are:
 \begin{itemize}
-  \item \textbf{Q3--Cross-Appliance Average}: Computes average values across two or more appliances for a single household 
+  \item \textbf{Q3--Cross-Appliance Average}: Computes average values across two or more appliances for a single household. 
   \item \textbf{Q4--Average Energy Consumption by House Type}: Computes the average total energy consumption grouped by house type.   
   \item \textbf{Q5--Average Energy Consumption by House}: Computes the average energy consumption per household.      
-  \item \textbf{Q6--Hourly Down-Sampling}: Aggregates minute-level readings into hourly averages for each appliance and household.     
+  \item \textbf{Q6--Hourly Downsampling}: Aggregates minute-level readings into hourly averages for each appliance and household.     
 \end{itemize}
 
-For query performance evaluation, we use only the largest workload (W5). Since all workloads share the same core structure, this approach avoids redundancy while ensuring a high-stress, representative query environment. The results are averaged over three runs for each query type. This test measures the query latency, throughput, result size, CPU usage, and memory consumption for each query type across the selected TSDBs.
+For query performance evaluation, we use only the largest workload (W5). Since all workloads share the same core structure, this approach avoids redundancy while ensuring a high-stress and representative query environment. The results are averaged over three runs for each query type. This test measures the query latency, throughput, result size, CPU usage, and memory consumption for each query type across the selected TSDBs.
 
 \subsection{Hardware Setup Notes}
 To ensure consistency, all TSDBs are deployed in isolated docker containers with identical hardware configurations, on a local machine. Docker was chosen due to its ability to provide isolated and consistent testing environments across the databases, hence eliminating system-level dependencies that may affect performance results~\cite{16_felter2015docker}. 
-Each database container was initialized using default config parameters, unless otherwise required by the database. The following specifications were used for the benchmarking tests:
+Each database container was initialized using default configuration parameters, unless otherwise required by the database. The following specifications were used for the benchmarking tests:
 \begin{itemize}
   \item \textbf{Host Machine}: Apple M1 Pro, 10 CPU cores, 32GB
   \item \textbf{Docker Version}: v28.1.1, build 4eba377
@@ -225,7 +227,7 @@ Fig.~\ref{fig:ingestion_latency_comparison} illustrates the ingestion latency fo
 \end{figure}
 
 \subsubsection{Ingestion Throughput}
-Fig.~\ref{fig:ingestion_throughput_comparison} shows that ClickHouse performs the best. On W5, ClickHouse achieved the highest throughput at 891K rows/sec, followed by QuestDB at 287K rows/sec. TimescaleDB showed a consistent but relatively low throughput. QuestDB showed reduced performance on larger workloads.
+Fig.~\ref{fig:ingestion_throughput_comparison} shows that ClickHouse performs the best. On W5, \textbf{ClickHouse achieved the highest throughput} at 891K rows/sec, followed by QuestDB at 287K rows/sec. TimescaleDB showed a consistent but relatively low throughput. QuestDB showed reduced performance on larger workloads.
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.8\linewidth]{2_ing_throughput_plot.pdf}
@@ -234,7 +236,7 @@ Fig.~\ref{fig:ingestion_throughput_comparison} shows that ClickHouse performs th
 \end{figure}
 
 \subsubsection{Ingestion Storage Footprint}
-Fig.~\ref{fig:ingestion_storage_comparison} illustrates the storage size used by each TSDB after ingesting the datasets for each workload tier. Looking at only the standard storage, we observe that all the databases use up more space than the original CSV file. \textbf{ClickHouse shows the lowest storage footprint across all workloads}. Post compression, ClickHouse achieves the best storage. Its storage footprint is significantly reduced when compared to the original CSV file. QuestDB does not apply compression, and therefore, its storage size remains constant across all workloads. Compression in TimescaleDB shows a decrease in storage size, performing better than QuestDB in terms of storage efficiency.
+Fig.~\ref{fig:ingestion_storage_comparison} illustrates the storage size used by each TSDB after ingesting the datasets for each workload tier. Looking at only the standard storage, we observe that all the databases use up more space than the original CSV file. Among the TSDBs, \textbf{ClickHouse shows the lowest storage footprint} across all workloads. Post compression, ClickHouse achieves the best storage. Its storage footprint is significantly reduced when compared to the original CSV file. QuestDB does not apply compression, and therefore, its storage size remains constant across all workloads. Compression in TimescaleDB does show a decrease in storage size, performing better than QuestDB in terms of storage efficiency.
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.8\linewidth]{3_ing_storage_plot.pdf}
@@ -243,33 +245,33 @@ Fig.~\ref{fig:ingestion_storage_comparison} illustrates the storage size used by
 \end{figure}
 
 \subsection{Query Results}
-We benchmarked six queries (Q1-Q6) that are representative of common time series operations on appliance level energy consumption data, on W5. The results are summarized in Fig.~\ref{fig:query_latency_comparison}, Fig.~\ref{fig:query_memory_comparison} and Fig.~\ref{fig:query_cpu_comparison}.
+We benchmarked six queries (Q1-Q6) on W5 that are representative of common time series operations on appliance level energy consumption data. The results are summarized in Fig.~\ref{fig:query_latency_comparison}, Fig.~\ref{fig:query_memory_comparison} and Fig.~\ref{fig:query_cpu_comparison}.
 
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.8\linewidth]{1_query_latency_ieee.pdf}
-\caption{WL5 Query Latency Comparison Across TSDBs.}
+\caption{Query Latency Comparison Across TSDBs.}
 \label{fig:query_latency_comparison}
 \end{figure}
 
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.8\linewidth]{2_query_memory.pdf}
-\caption{WL5 Query Memory Usage Comparison Across TSDBs.}
+\caption{Query Memory Usage Comparison Across TSDBs.}
 \label{fig:query_memory_comparison}
 \end{figure}
 
 \begin{figure}[tb]
 \centering
 \includegraphics[width=0.8\linewidth]{3_query_cpu.pdf}
-\caption{WL5 Query CPU Usage Comparison Across TSDBs}
+\caption{Query CPU Usage Comparison Across TSDBs.}
 \label{fig:query_cpu_comparison}
 \end{figure}
 
 \subsubsection{Q1}
 TimescaleDB performs well on simple data retrieval due to hyper-table chunking and time-based pruning. However, CPU spikes (204\%) suggest that internal decompression or indexing is resource-intensive.
 QuestDB performs the worst. Despite storing data in time-partitioned files, it scans extra data due to a lack of indexing granularity and full-column reads.
-ClickHouse performs well. Its granule-level access reduces IO, but its MergeTree parts are optimized for large batch reads, not point lookups.
+ClickHouse performs well. Its granule-level access reduces IO, but its MergeTree parts are not helpful here since they are optimized for large batch reads, not point lookups.
 
 \subsubsection{Q2}
 
@@ -284,7 +286,7 @@ Since ClickHouse is a column-store, it does well with this query.
 
 \subsubsection{Q4}
 TimescaleDB's performance drops here due to multiple GROUP BY clauses across a large dataset. Decompression and re-aggregation across many house types cause high CPU usage and latency, revealing limits in chunk-level parallelism.
-QuestDB has a high latency (938 ms) despite a reduced query scope suggests It struggles with multiple group-by operations. Its row-store access patterns require large in-memory scans.
+QuestDB has a high latency (938 ms) despite a reduced query scope suggests it struggles with multiple group-by operations. Its row-store access patterns require large in-memory scans.
 ClickHouse has efficient aggregation engine groups and computes millions of rows in a few hundred ms. MergeTree partitions and parallel aggregation kernels accelerate time-based group-bys.
 
 \subsubsection{Q5}

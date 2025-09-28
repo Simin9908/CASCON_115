@@ -1,0 +1,355 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[hyphens]{url} % defines \url
+\urlstyle{same}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Benchmarking and Evaluating Time Series Databases for Appliance-Level Energy Consumption Data\\
+}
+
+\author{\IEEEauthorblockN{Simin Shehbaz}
+\IEEEauthorblockA{\textit{Faculty of Computer Science} \\
+\textit{University of New Brunswick}\\
+Fredericton, Canada \\
+simin.shehbaz@unb.ca}
+\and
+\IEEEauthorblockN{Mohammad Mehabadi}
+\IEEEauthorblockA{\textit{Faculty of Computer Science} \\
+\textit{University of New Brunswick}\\
+Fredericton, Canada \\
+m.mehabadi@unb.ca}
+\and
+\IEEEauthorblockN{Kenneth B. Kent}
+\IEEEauthorblockA{\textit{Faculty of Computer Science} \\
+\textit{University of New Brunswick}\\
+Fredericton, Canada \\
+ken@unb.ca}
+}
+
+\maketitle
+
+\begin{abstract}
+Time series databases (TSDBs) are widely used to store high-frequency energy consumption data, but their performance varies depending on workload characteristics. This paper benchmarks leading TSDBs to identify their suitability to handle appliance-level, per-minute energy data. While prior work has evaluated TSDBs, limited research has been done on TSDBs for wide-format, fine-grained residential energy data at the appliance level. We introduce a custom-generated dataset simulating the usage of twenty-six appliances across five household types in a wide-format schema. Building on the TSM-Bench framework, we adapt it to support our appliance-level dataset, domain-specific workloads, and evaluation metrics. We analyze ingestion and query performance across three TSDBs that support this wide-format, while highlighting the trade-offs in latency, resource usage, throughput and storage.
+
+Looking ahead, we plan to evaluate schema transformations (wide to narrow), explore additional TSDBs optimized for narrow-format ingestion and compare their performance against wide-format results. These measures aim to provide a comprehensive and  format-aware comparison of TSDBs.
+\end{abstract}
+
+\begin{IEEEkeywords}
+time series databases, benchmarking, IoT, energy consumption, benchmark workloads, ingestion \& query performance
+\end{IEEEkeywords}
+
+\section{Introduction}
+The rise of smart homes, Internet of Things (IoT)-enabled devices, and renewable energy systems have made \textbf{appliance-level energy consumption data} a critical resource for building intelligent infrastructure. Capturing this data at \textbf{minute-level frequency} from dozens of appliances produces large-scale, multi-dimensional time series data—demanding efficient storage, querying, and analysis. Time series databases (TSDBs) are essential for managing large volumes of time-stamped data with \textbf{low-latency read and write performance}. They are preferred over general-purpose databases in real-time monitoring applications, due to their \textbf{scalability, compression efficiency}, and native support for streaming analytics~\cite{1_tsmbench2023}. TSDBs use time-based indexing, columnar storage, down-sampling strategies, and offer built-in support for temporal queries such as sliding windows, aggregations, and time filters~\cite{1_tsmbench2023}.  Unlike traditional relational databases, TSDBs are optimized for \textbf{high ingestion throughput} and storage efficiency~\cite{1_tsmbench2023,2_tsmsurvey2017}. 
+
+A crucial design choice when storing time series data is the schema format—wide vs. narrow. In the \textbf{wide format}, each row contains multiple sensor readings for a single timestamp. In contrast, the \textbf{narrow format} stores one measurement per row, requiring additional columns for the sensor identifier and its value. Wide-format schemas are typically better suited for high-dimensional sensor data where all sensors report at the same interval, enabling faster cross-sensor operations and improved compression due to columnar locality~\cite{6_clickbench}. However, they may be less flexible for variable-frequency streams or semi-structured data, where narrow formats are more common~\cite{2_tsmsurvey2017}.
+
+In the context of the appliance-level energy data that we are addressing in this paper, typical analyses on this data would include: \textbf{trends over time} (e.g., how the heater consumption varies seasonally), \textbf{anomaly detection} that identifies surges in energy readings (e.g., devices left on), \textbf{device-level usage comparison}, and checking for \textbf{peak demands}, showing the critical role of TSDBs in analytics. 
+
+Existing benchmarks have not evaluated systems under appliance-level energy workloads. They have focused on specific domains like financial transactions, smart buildings, and industrial instruments~\cite{3_tsbs,4_smartbench2020,5_scits2022}. TSM-Bench comes close in scope, and caters to wide-formatted data~\cite{1_tsmbench2023}. Hence we extend this framework, tailoring it to our fine-grained, appliance-level, energy dataset that exhibits: high dimensionality, wide-format rows, frequent data points (minute-level), and realistic workloads.
+
+Every testing system is optimized around trade-offs made in storage formatting, indexing, compression and query execution~\cite{1_tsmbench2023,2_tsmsurvey2017,6_clickbench}. Therefore, this work presents a comprehensive benchmarking framework for appliance-level energy data that extends the TSM-Bench, while making the following contributions:
+\begin{itemize}
+  \item Developing a benchmarking framework tailored to appliance-level energy consumption, evaluating both ingestion and query performance.
+  \item Generating data workloads using \textbf{`DGSim'}, a custom simulator that simulates realistic energy consumption patterns for 26 appliances across five household types, producing wide-format, minute-level time series data~\cite{17_DGSim}.
+  \item Defining a varying set of workload strains including write-heavy streams, range queries, time aggregations (daily/monthly), and appliance-level comparisons.
+  \item Benchmarking three leading TSDBs: TimescaleDB, QuestDB and ClickHouse.
+\end{itemize}
+
+The remainder of the paper is structured as follows: Section~\ref{sec:related} reviews related work on TSDB benchmarking and appliance-level datasets. Section~\ref{sec:setup} presents the study setup, Section~\ref{sec:framework} details the benchmarking framework. Section~\ref{sec:results} reports and analyzes the experimental results. Section~\ref{sec:conclusion} concludes the paper, and Section~\ref{sec:future} outlines future research directions.
+
+
+\section{Related Work}\label{sec:related}
+Numerous benchmarks have been proposed to evaluate TSDBs, each tailored to specific application domains and workload characteristics.
+
+\textbf{TSM-Bench} is among the most comprehensive benchmarks for TSDBs used in monitoring environments~\cite{1_tsmbench2023}. It introduces offline and online workload tiers, a suite of fundamental time-based queries, and a novel Generative Adversarial Network (GAN)-based data generator (TS-LSH) tailored specifically for hydrological data. While powerful, its design is domain-specific and does not generalize well to energy datasets. \textbf{TSBS} (Time Series Benchmark Suite) is widely used in industry to compare storage size, loading time, and aggregation performance across systems like InfluxDB and TimescaleDB~\cite{3_tsbs}. However, TSBS is heavily geared toward finance and DevOps metrics, and lacks native support for wide-format ingestion and complex device-level analytics~\cite{3_tsbs}.
+\textbf{SciTS} benchmarks TSDBs for scientific instrumentation use cases. It uses synthetic data to evaluate ingestion and query latency~\cite{5_scits2022}. SmartBench evaluates data systems for smart buildings~\cite{4_smartbench2020}. However, it limits its scope to correlation queries and basic filtering on noisy datasets. 
+\textbf{IoTDB-Benchmark} focuses on heterogeneous IoT data with different sensor types and frequencies~\cite{7_iotdbbenchmark}. It evaluates ingestion throughput and query performance but assumes narrow-format, homogeneous time series and does not support appliance-level complexity.
+\textbf{IoTAbench} was proposed as a benchmark for IoT analytics platforms and uses real-world sensor data to assess ingestion and analytics performance~\cite{9_iotabench2015}. While highlighting power usage scenarios, it uses simplified event models and focuses on system-level throughput over schema variations.
+\textbf{TS-Benchmark} is tailored to benchmark electricity data from wind turbines, while incorporating realistic workloads including anomaly detection and multi-sensor fetches. However, it is limited to offline evaluation and assumes a relatively simple data layout patterns~\cite{10_tsbenchmark2021}.
+An important system-level study is the encoding analysis for \textbf{Apache IoTDB}, which compares time series compression formats under various characteristics including data repetition, sparsity, and delta distribution~\cite{11_iotdbencoding2022}. This study indirectly evaluates performance on wide-format data by examining columnar compression effects, making it relevant for storage strategy comparisons.
+
+Collectively, these benchmarks have advanced TSDB evaluation. However, none offer an end-to-end assessment for appliance-level energy data, which requires support for wide and narrow schema comparisons, multi-sensor queries, and concurrent streaming and analytics—core demands in smart energy systems.
+
+
+\section{Experimental Setup}\label{sec:setup}
+This section outlines the data generation process, data characteristics, and the process of selecting TSDBs that are used in this study.
+\subsection{Data Generation}
+The dataset used in this study is generated using \textbf{``DGSim''}, developed in prior work under this study~\cite{17_DGSim}. This models appliance-level energy consumption based on the usage patterns of various household appliances. It has been designed to model realistic energy consumption patterns by appliances including those of heating, ventilation, and air conditioning (HVAC) systems, refrigerators, and washing machines. DGSim adopts a \textbf{Markov, state-based modeling technique}, where each appliance is modeled as a probabilistic state machine~\cite{12_zucchini2016hmm}. This simulator provides a scalable, reproducible environment for generating data as required by the experiment. 
+DGSim originally generated aggregated energy consumption profiles for a large number of households. For the purpose of this benchmarking study, the simulator was modified to output disaggregated, appliance-level energy consumption data for individual households.
+\subsection{Data Characteristics}
+The generated dataset follows a wide format, where each row represents a timestamp and each column corresponds to a specific appliance. It captures minute-level energy consumption for twenty-six appliances over a user-defined time range. DGSim supports five distinct household types: single-family attached, single-family detached, mobile home, two-to-four room apartment and apartments with more than five rooms. Each of these have different consumption patterns.
+For this study, datasets were exported as CSV files prior to ingestion. Table~\ref{tab:dataset_characteristics} summarizes the structure and attributes of the dataset.
+
+\begin{table}[htbp]
+\caption{Characteristics of the Appliance-Level Energy Consumption Dataset}
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Characteristic} & \textbf{Description} \\
+\hline
+Time Granularity & 1-minute intervals \\
+Time Range & User-defined \\
+Appliances Modeled & 26 appliances \\
+Number of Columns & 30 columns \\
+Dataset Format & Wide format \\
+House Types & 5 distinct types \\
+Operations & Simulate → Insert → Query \\
+Storage Format & CSV (pre-ingestion), TSDB (post-ingestion) \\
+\hline
+\end{tabular}
+\label{tab:dataset_characteristics}
+\end{center}
+\end{table}
+
+\subsection{TSDBs' Inclusion and Exclusion Criteria}
+We have defined a set of inclusion and exclusion criteria to select the appropriate TSDBs for this benchmarking study. The criteria are as follows:
+\subsubsection{Inclusion Criteria}
+\begin{itemize}
+    \item Native support for time-series data, indexing, and storage
+    \item Open-source or free for academic use
+    \item Ability to ingest wide and narrow format data
+    \item Support for time-based queries, filtering, and aggregation
+    \item Native support for Docker-based deployment
+\end{itemize}
+\subsubsection{Exclusion Criteria}
+\begin{itemize}
+    \item Unmaintained or inactive projects, or projects that have had no updates in over a year
+\end{itemize}
+
+\subsection{Selected TSDBs for Benchmark Study}
+Starting with a list of thirty-one TSDBs identified through literature and community sources, we applied the above criteria to narrow the selection to four candidates.
+ClickHouse is a high-performance columnar database with strong support for wide schemas. Its \textbf{MergeTree} engine enables high ingestion rates through \textbf{delta encoding} and \textbf{Single Instruction Multiple Data (SIMD)-optimized scans}~\cite{6_clickbench}.
+TimescaleDB, built on PostgreSQL, stores time series data in row-oriented \textbf{hyper-tables}, partitioned by time. It handles wide rows effectively by using array-based storage and \textbf{chunk-level compression}~\cite{2_tsmsurvey2017}.
+ QuestDB is a lightweight TSDB using column-store layout with time-partitioned tables and \textbf{memory-mapped I/O}. It supports wide schemas but lacks advanced compression, leading to a larger storage footprint~\cite{13_questdbdocs}.
+Although flexible and JSON-friendly, CrateDB has an inverted index structure and is inefficient for wide-schema ingestion with frequent updates~\cite{15_rinaldi2019}. During preliminary testing, it showed significant bottlenecks, and was excluded from comparative analysis.
+The final TSDBs selected were: \textbf{TimescaleDB}, \textbf{QuestDB}, and \textbf{ClickHouse}.
+
+
+\subsection{Units}
+\begin{itemize}
+\item Use either SI (MKS) or CGS as primary units. (SI units are encouraged.) English units may be used as secondary units (in parentheses). An exception would be the use of English units as identifiers in trade, such as ``3.5-inch disk drive''.
+\item Avoid combining SI and CGS units, such as current in amperes and magnetic field in oersteds. This often leads to confusion because equations do not balance dimensionally. If you must use mixed units, clearly state the units for each quantity that you use in an equation.
+\item Do not mix complete spellings and abbreviations of units: ``Wb/m\textsuperscript{2}'' or ``webers per square meter'', not ``webers/m\textsuperscript{2}''. Spell out units when they appear in text: ``. . . a few henries'', not ``. . . a few H''.
+\item Use a zero before decimal points: ``0.25'', not ``.25''. Use ``cm\textsuperscript{3}'', not ``cc''.)
+\end{itemize}
+
+\subsection{Equations}
+Number equations consecutively. To make your 
+equations more compact, you may use the solidus (~/~), the exp function, or 
+appropriate exponents. Italicize Roman symbols for quantities and variables, 
+but not Greek symbols. Use a long dash rather than a hyphen for a minus 
+sign. Punctuate equations with commas or periods when they are part of a 
+sentence, as in:
+\begin{equation}
+a+b=\gamma\label{eq}
+\end{equation}
+
+Be sure that the 
+symbols in your equation have been defined before or immediately following 
+the equation. Use ``\eqref{eq}'', not ``Eq.~\eqref{eq}'' or ``equation \eqref{eq}'', except at 
+the beginning of a sentence: ``Equation \eqref{eq} is . . .''
+
+\subsection{\LaTeX-Specific Advice}
+
+Please use ``soft'' (e.g., \verb|\eqref{Eq}|) cross references instead
+of ``hard'' references (e.g., \verb|(1)|). That will make it possible
+to combine sections, add equations, or change the order of figures or
+citations without having to go through the file line by line.
+
+Please don't use the \verb|{eqnarray}| equation environment. Use
+\verb|{align}| or \verb|{IEEEeqnarray}| instead. The \verb|{eqnarray}|
+environment leaves unsightly spaces around relation symbols.
+
+Please note that the \verb|{subequations}| environment in {\LaTeX}
+will increment the main equation counter even when there are no
+equation numbers displayed. If you forget that, you might write an
+article in which the equation numbers skip from (17) to (20), causing
+the copy editors to wonder if you've discovered a new method of
+counting.
+
+{\BibTeX} does not work by magic. It doesn't get the bibliographic
+data from thin air but from .bib files. If you use {\BibTeX} to produce a
+bibliography you must send the .bib files. 
+
+{\LaTeX} can't read your mind. If you assign the same label to a
+subsubsection and a table, you might find that Table I has been cross
+referenced as Table IV-B3. 
+
+{\LaTeX} does not have precognitive abilities. If you put a
+\verb|\label| command before the command that updates the counter it's
+supposed to be using, the label will pick up the last counter to be
+cross referenced instead. In particular, a \verb|\label| command
+should not go before the caption of a figure or a table.
+
+Do not use \verb|\nonumber| inside the \verb|{array}| environment. It
+will not stop equation numbers inside \verb|{array}| (there won't be
+any anyway) and it might stop a wanted equation number in the
+surrounding equation.
+
+\subsection{Some Common Mistakes}\label{SCM}
+\begin{itemize}
+\item The word ``data'' is plural, not singular.
+\item The subscript for the permeability of vacuum $\mu_{0}$, and other common scientific constants, is zero with subscript formatting, not a lowercase letter ``o''.
+\item In American English, commas, semicolons, periods, question and exclamation marks are located within quotation marks only when a complete thought or name is cited, such as a title or full quotation. When quotation marks are used, instead of a bold or italic typeface, to highlight a word or phrase, punctuation should appear outside of the quotation marks. A parenthetical phrase or statement at the end of a sentence is punctuated outside of the closing parenthesis (like this). (A parenthetical sentence is punctuated within the parentheses.)
+\item A graph within a graph is an ``inset'', not an ``insert''. The word alternatively is preferred to the word ``alternately'' (unless you really mean something that alternates).
+\item Do not use the word ``essentially'' to mean ``approximately'' or ``effectively''.
+\item In your paper title, if the words ``that uses'' can accurately replace the word ``using'', capitalize the ``u''; if not, keep using lower-cased.
+\item Be aware of the different meanings of the homophones ``affect'' and ``effect'', ``complement'' and ``compliment'', ``discreet'' and ``discrete'', ``principal'' and ``principle''.
+\item Do not confuse ``imply'' and ``infer''.
+\item The prefix ``non'' is not a word; it should be joined to the word it modifies, usually without a hyphen.
+\item There is no period after the ``et'' in the Latin abbreviation ``et al.''.
+\item The abbreviation ``i.e.'' means ``that is'', and the abbreviation ``e.g.'' means ``for example''.
+\end{itemize}
+An excellent style manual for science writers is \cite{b7}.
+
+\subsection{Authors and Affiliations}
+\textbf{The class file is designed for, but not limited to, six authors.} A 
+minimum of one author is required for all conference articles. Author names 
+should be listed starting from left to right and then moving down to the 
+next line. This is the author sequence that will be used in future citations 
+and by indexing services. Names should not be listed in columns nor group by 
+affiliation. Please keep your affiliations as succinct as possible (for 
+example, do not differentiate among departments of the same organization).
+
+\subsection{Identify the Headings}
+Headings, or heads, are organizational devices that guide the reader through 
+your paper. There are two types: component heads and text heads.
+
+Component heads identify the different components of your paper and are not 
+topically subordinate to each other. Examples include Acknowledgments and 
+References and, for these, the correct style to use is ``Heading 5''. Use 
+``figure caption'' for your Figure captions, and ``table head'' for your 
+table title. Run-in heads, such as ``Abstract'', will require you to apply a 
+style (in this case, italic) in addition to the style provided by the drop 
+down menu to differentiate the head from the text.
+
+Text heads organize the topics on a relational, hierarchical basis. For 
+example, the paper title is the primary text head because all subsequent 
+material relates and elaborates on this one topic. If there are two or more 
+sub-topics, the next level head (uppercase Roman numerals) should be used 
+and, conversely, if there are not at least two sub-topics, then no subheads 
+should be introduced.
+
+\subsection{Figures and Tables}
+\paragraph{Positioning Figures and Tables} Place figures and tables at the top and 
+bottom of columns. Avoid placing them in the middle of columns. Large 
+figures and tables may span across both columns. Figure captions should be 
+below the figures; table heads should appear above the tables. Insert 
+figures and tables after they are cited in the text. Use the abbreviation 
+``Fig.~\ref{fig}'', even at the beginning of a sentence.
+
+\begin{table}[htbp]
+\caption{Table Type Styles}
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
+\cline{2-4} 
+\textbf{Head} & \textbf{\textit{Table column subhead}}& \textbf{\textit{Subhead}}& \textbf{\textit{Subhead}} \\
+\hline
+copy& More table copy$^{\mathrm{a}}$& &  \\
+\hline
+\multicolumn{4}{l}{$^{\mathrm{a}}$Sample of a Table footnote.}
+\end{tabular}
+\label{tab1}
+\end{center}
+\end{table}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics{fig1.png}}
+\caption{Example of a figure caption.}
+\label{fig}
+\end{figure}
+
+Figure Labels: Use 8 point Times New Roman for Figure labels. Use words 
+rather than symbols or abbreviations when writing Figure axis labels to 
+avoid confusing the reader. As an example, write the quantity 
+``Magnetization'', or ``Magnetization, M'', not just ``M''. If including 
+units in the label, present them within parentheses. Do not label axes only 
+with units. In the example, write ``Magnetization (A/m)'' or ``Magnetization 
+\{A[m(1)]\}'', not just ``A/m''. Do not label axes with a ratio of 
+quantities and units. For example, write ``Temperature (K)'', not 
+``Temperature/K''.
+
+\section*{Acknowledgment}
+
+The preferred spelling of the word ``acknowledgment'' in America is without 
+an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B. 
+G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
+acknowledgments in the unnumbered footnote on the first page.
+
+\section*{References}
+
+
+Number footnotes separately in superscripts. Place the actual footnote at 
+the bottom of the column in which it was cited. Do not put footnotes in the 
+abstract or reference list. Use letters for table footnotes.
+
+Unless there are six authors or more give all authors' names; do not use 
+``et al.''. Papers that have not been published, even if they have been 
+submitted for publication, should be cited as ``unpublished'' \cite{b4}. Papers 
+that have been accepted for publication should be cited as ``in press'' \cite{b5}. 
+Capitalize only the first word in a paper title, except for proper nouns and 
+element symbols.
+
+For papers published in translation journals, please give the English 
+citation first, followed by the original foreign-language citation \cite{b6}.
+
+\begin{thebibliography}{00}
+
+\bibitem{1_tsmbench2023}
+A.~Khelifati, M.~Khayati, A.~Dignös, D.~Difallah, and P.~Cudre-Mauroux, ``{TSM-Bench}: Benchmarking time series database systems for monitoring applications,'' \emph{Proc. VLDB Endow.}, vol.~16, no.~11, pp. 3363--3376, 2023.
+
+\bibitem{2_tsmsurvey2017}
+S.~K. Jensen, T.~B. Pedersen, and C.~Thomsen, ``{Time Series Management Systems: A Survey},'' \emph{IEEE Transactions on Knowledge and Data Engineering}, vol.~29, no.~11, pp. 2581--2600, 2017.
+
+\bibitem{6_clickbench}
+{ClickHouse Team}, ``{ClickBench: Benchmarking Analytical Databases},'' \url{https://github.com/ClickHouse/ClickBench}, 2021, accessed: 2025-06-19.
+
+\bibitem{3_tsbs}
+{Timescale Team}, ``{Time Series Benchmark Suite (TSBS)},'' \url{https://github.com/timescale/tsbs}, 2020, accessed: 2025-06-19.
+
+\bibitem{4_smartbench2020}
+P.~Gupta, M.~J. Carey, S.~Mehrotra, and R.~Yus, ``{SmartBench: A Benchmark for Data Management in Smart Spaces},'' \emph{Proc. VLDB Endow.}, vol.~13, no.~12, pp. 1807--1820, 2020. [Online]. Available: \url{http://www.vldb.org/pvldb/vol13/p1807-gupta.pdf}
+
+\bibitem{5_scits2022}
+J.~Mostafa, S.~Wehbi, S.~Chilingaryan, and A.~Kopmann, ``{SciTS: A Benchmark for Time-Series Databases in Scientific Experiments and Industrial IoT},'' in \emph{Proceedings of the ACM International Conference on Management of Data (SIGMOD)}, 2022.
+
+\bibitem{17_DGSim}
+B.~S.~P. Addala, M.~M. Mohammadi, and K.~B. Kent, ``{DGSim: A Scalable Framework for Simulating Energy Consumption of Household Appliances},'' in \emph{Proceedings of the 39th ECMS International Conference on Modelling and Simulation}, Catania, Italy, Jun. 2025, pp. 562--569.
+
+\bibitem{7_iotdbbenchmark}
+R.~Liu, J.~Yuan, and X.~Huang, ``{Benchmarking Time Series Databases with IoTDB-Benchmark for IoT Scenarios},'' \url{https://arxiv.org/abs/1901.08304}, 2019, arXiv:1901.08304.
+
+\bibitem{9_iotabench2015}
+M.~Arlitt, M.~Marwah, G.~Bellala, A.~Shah, J.~Healey, and B.~Vandiver, ``{IoTAbench: an Internet of Things Analytics Benchmark},'' in \emph{Proc. of the 6th ACM/SPEC International Conference on Performance Engineering (ICPE)}.\hskip 1em plus 0.5em minus 0.4em\relax ACM, 2015, pp. 133--144.
+
+\bibitem{10_tsbenchmark2021}
+Y.~Hao, X.~Qin, Y.~Chen, Y.~Li, X.~Sun, and Y.~Tao, ``{TS-Benchmark: A Benchmark for Time Series Databases},'' in \emph{Proc. of the 2021 IEEE 37th International Conference on Data Engineering (ICDE)}.\hskip 1em plus 0.5em minus 0.4em\relax IEEE, 2021.
+
+\bibitem{11_iotdbencoding2022}
+J.~Xiao, Y.~Huang, C.~Hu, S.~Song, X.~Huang, and J.~Wang, ``{Time Series Data Encoding for Efficient Storage: A Comparative Analysis in Apache IoTDB},'' \emph{Proc. VLDB Endow.}, vol.~15, no.~10, pp. 2148--2160, 2022.
+
+\bibitem{12_zucchini2016hmm}
+I.~L. MacDonald, W.~Zucchini, and R.~Langrock, \emph{Hidden Markov Models for Time Series: An Introduction Using R}, 2nd~ed.\hskip 1em plus 0.5em minus 0.4em\relax CRC Press, 2016.
+
+\bibitem{13_questdbdocs}
+{QuestDB Team}, ``Questdb documentation: Architecture overview,'' 2024, accessed: 2025-06-19. [Online]. Available: \url{https://questdb.io/docs/reference/architecture/}
+
+\bibitem{15_rinaldi2019}
+S.~Rinaldi, F.~Bonafini, P.~Ferrari, A.~Flammini, E.~Sisinni, and D.~Bianchini, ``{Impact of Data Model on Performance of Time Series Database for Internet of Things Applications},'' in \emph{IEEE Int. Instrumentation and Measurement Technology Conf. (I2MTC)}, 2019, pp. 1--6.
+
+\bibitem{16_felter2015docker}
+W.~Felter, A.~Ferreira, R.~Rajamony, and J.~Rubio, ``{An Updated Performance Comparison of Virtual Machines and Linux Containers},'' in \emph{2015 IEEE International Symposium on Performance Analysis of Systems and Software (ISPASS)}.\hskip 1em plus 0.5em minus 0.4em\relax IEEE, 2015, pp. 171--172.
+
+\end{thebibliography}
+\end{document}
